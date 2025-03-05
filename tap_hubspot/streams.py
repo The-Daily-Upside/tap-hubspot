@@ -1512,7 +1512,28 @@ class EmailStream(DynamicIncrementalHubspotStream):
     primary_keys = ("id",)
     replication_key = "hs_lastmodifieddate"
     records_jsonpath = "$[results][*]"  # Or override `parse_response`.
+    fields_to_ignore = ['hs_body_preview', 'hs_body_preview_html', 'hs_email_text', 'hs_email_html', 'hs_email_headers']
 
+    # add parse_response method to parse the response
+    def parse_response(self, response: requests.Response, **kwargs) -> t.Any:
+        """Parse the response from the API.
+
+        Args:
+            response: The response from the API.
+            kwargs: Additional keyword arguments.
+
+        Returns:
+            The parsed response.
+        """
+        response_json = response.json()
+        results = response_json.get("results", [])
+        new_results = []
+        for result in results:
+            for field in self.fields_to_ignore:
+                result['properties'].pop(field, None)
+            new_results.append(result)
+        return new_results
+        
     @property
     def url_base(self) -> str:
         """Returns an updated path which includes the api version."""
